@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: review-microservice
+  
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/reviews}
+    username: ${DATABASE_USERNAME:reviews_user}
+    password: ${DATABASE_PASSWORD:reviews_pass}
+    driver-class-name: org.postgresql.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# AWS Configuration
+aws:
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    bucket: ${S3_BUCKET:review-data-bucket}
+    prefix: ${S3_PREFIX:daily-reviews/}
+
+# Application Configuration
+app:
+  processing:
+    max-concurrency: ${MAX_CONCURRENCY:5}
+    batch-size: ${BATCH_SIZE:100}
+  scheduling:
+    enabled: ${SCHEDULING_ENABLED:false}
+    cron: ${PROCESSING_CRON:0 0 2 * * ?}
+
+# Logging Configuration
+logging:
+  level:
+    com.reviewsystem: ${LOG_LEVEL:INFO}
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE:logs/review-microservice.log}
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+
+---
+# Test Profile
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
