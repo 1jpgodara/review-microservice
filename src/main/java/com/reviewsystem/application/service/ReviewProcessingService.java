@@ -255,5 +255,6 @@ public class ReviewProcessingService {
         private int recordsProcessed;
         private long processingTime;
         private boolean success;
+        private String error;
     }
 }
