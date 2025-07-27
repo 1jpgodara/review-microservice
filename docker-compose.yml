@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: review-postgres
+    environment:
+      POSTGRES_DB: reviews
+      POSTGRES_USER: reviews_user
+      POSTGRES_PASSWORD: reviews_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reviews_user -d reviews"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - review-network
+
+  review-service:
+    build: .
+    container_name: review-microservice
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/reviews
+      DATABASE_USERNAME: reviews_user
+      DATABASE_PASSWORD: reviews_pass
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-review-data-bucket}
+      S3_PREFIX: ${S3_PREFIX:-daily-reviews/}
+      MAX_CONCURRENCY: ${MAX_CONCURRENCY:-5}
+      BATCH_SIZE: ${BATCH_SIZE:-100}
+      SCHEDULING_ENABLED: ${SCHEDULING_ENABLED:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/reviews/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - review-network
+
+networks:
+  review-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+  logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: /var/lib/docker/volumes/logs/_data
